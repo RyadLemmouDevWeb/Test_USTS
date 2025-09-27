@@ -12,15 +12,12 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [isDark, setIsDark] = useState(() => {
-    // Check localStorage for saved theme preference
     const saved = localStorage.getItem('theme');
     return saved ? JSON.parse(saved) : false;
   });
 
   useEffect(() => {
-    // Apply theme to document root
     document.documentElement.classList.toggle('dark', isDark);
-    // Save preference to localStorage
     localStorage.setItem('theme', JSON.stringify(isDark));
   }, [isDark]);
 
