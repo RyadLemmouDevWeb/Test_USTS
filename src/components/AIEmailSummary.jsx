@@ -5,23 +5,27 @@ import { Button } from './ui/button';
 import emailService from '../services/emailService';
 
 const AIEmailSummary = () => {
-  // Composant temporairement désactivé - workflow n8n à implémenter
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const loadSummary = async () => {
-    // TODO: Implémenter le workflow n8n pour le résumé IA
-    // Endpoint: /webhook/get-summary avec intégration Groq
-    setError('Fonctionnalité en développement');
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await emailService.getGlobalSummary();
+      setSummary(res.summary || 'Aucun résumé disponible.');
+    } catch (err) {
+      setError('Erreur lors de la récupération du résumé IA.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Désactivé temporairement
-  // useEffect(() => {
-  //   loadSummary();
-  // }, []);
+  useEffect(() => {
+    loadSummary();
+  }, []);
 
-  // Affichage temporaire en attendant l'implémentation du workflow n8n
   return (
     <Card className="bg-white dark:bg-[#1F2937] border-gray-200 dark:border-gray-700">
       <CardHeader className="pb-3">
@@ -31,15 +35,24 @@ const AIEmailSummary = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-center p-6 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-          <AlertCircle className="h-5 w-5 mr-2" />
-          <div className="text-center">
-            <p className="font-medium mb-1">Fonctionnalité à venir</p>
-            <p className="text-sm opacity-80">
-              Résumé IA avec intégration Groq en développement
-            </p>
+        {loading ? (
+          <div className="flex items-center justify-center p-6 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+            Chargement du résumé IA...
           </div>
-        </div>
+        ) : error ? (
+          <div className="flex items-center justify-center p-6 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            {error}
+            <Button onClick={loadSummary} variant="outline" size="sm" className="ml-4">Réessayer</Button>
+          </div>
+        ) : summary ? (
+          <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-[#4B006E] dark:text-[#E9D5FF] whitespace-pre-line">
+            {summary}
+          </div>
+        ) : (
+          <div className="text-gray-500 dark:text-gray-400">Aucun résumé disponible.</div>
+        )}
       </CardContent>
     </Card>
   );

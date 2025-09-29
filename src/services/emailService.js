@@ -7,27 +7,47 @@ class EmailService {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return await response.json();
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        return { emails: [] };
+      }
+      try {
+        const parsed = JSON.parse(text);
+        return parsed;
+      } catch (parseError) {
+        return { emails: [] };
+      }
     } catch (error) {
-      console.error('Erreur lors de la récupération des emails:', error);
       throw error;
     }
   }
 
   async getGlobalSummary() {
     try {
-      const response = await fetch(`${N8N_BASE_URL}/webhook/get-summary`);
+      const response = await fetch(`${N8N_BASE_URL}/webhook/ai-summary`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return await response.json();
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        return { summary: 'Aucun résumé disponible' };
+      }
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        return { summary: 'Erreur lors du parsing du résumé' };
+      }
     } catch (error) {
-      console.error('Erreur lors de la récupération du résumé:', error);
       throw error;
     }
   }
 
-  async sendManualReply(emailId, recipientEmail, subject, body) {
+  async sendManualReply(emailId, recipientEmail, subject, body, messageId) {
     try {
       const response = await fetch(`${N8N_BASE_URL}/webhook/send-reply`, {
         method: 'POST',
@@ -39,22 +59,28 @@ class EmailService {
           emailId,
           to: recipientEmail,
           subject: `Re: ${subject}`,
-          body
+          body,
+          messageId
         })
       });
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      return await response.json();
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        return { success: false, message: 'Réponse vide du serveur' };
+      }
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        return { success: false, message: 'Erreur de parsing de la réponse' };
+      }
     } catch (error) {
-      console.error('Erreur lors de l\'envoi de la réponse:', error);
       throw error;
     }
   }
 
-  async sendAutoReply(emailId, recipientEmail, subject, originalContent, context = '') {
+  async sendAutoReply(emailId, recipientEmail, subject, originalContent, messageId, context = '') {
     try {
       const response = await fetch(`${N8N_BASE_URL}/webhook/send-auto-reply`, {
         method: 'POST',
@@ -67,19 +93,29 @@ class EmailService {
           to: recipientEmail,
           subject: `Re: ${subject}`,
           originalContent,
+          messageId,
           context
         })
       });
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      return await response.json();
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        return { success: false, message: 'Réponse vide du serveur' };
+      }
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        return { success: false, message: 'Erreur de parsing de la réponse' };
+      }
     } catch (error) {
-      console.error('Erreur lors de l\'envoi de la réponse automatique:', error);
       throw error;
     }
+  }
+
+  async generateAIReply(emailId, recipientEmail, subject, originalContent, messageId, context = '') {
+    return this.sendAutoReply(emailId, recipientEmail, subject, originalContent, messageId, context);
   }
 }
 
