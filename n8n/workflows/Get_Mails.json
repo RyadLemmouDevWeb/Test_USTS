@@ -1,0 +1,199 @@
+{
+  "name": "Get_Mails",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "get-mails",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d2b03b8d-2550-4c5a-9002-6b9896b67415",
+      "name": "Webhook",
+      "webhookId": "e61cb5e3-c2c3-4fa4-ba9a-3e76561e0c5a"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "d9f00aa1-936a-419c-8f05-6e1afbe70d0e",
+      "name": "Get many messages",
+      "webhookId": "5b42c73a-9c78-400f-9cb2-431f6097d1b3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "81cnOWzhifp5HqxH",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{$json[\"id\"]}}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "3de7b151-0a21-43ca-ab50-82d537d056e6",
+      "name": "Get a message",
+      "webhookId": "30336b44-9cc3-4825-81ec-95975a4c8077",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "81cnOWzhifp5HqxH",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nfunction getHeader(headers, name) {\n  if (!headers) return undefined;\n  if (Array.isArray(headers)) {\n    const found = headers.find(h => h.name?.toLowerCase() === name.toLowerCase());\n    return found ? found.value : undefined;\n  }\n  if (typeof headers === 'object') {\n    return headers[name] || headers[name.toLowerCase()];\n  }\n  return undefined;\n}\n\nconst transformedEmails = items.map((item, index) => {\n  const email = item.json;\n  let emailData = email;\n  if (email.payload) {\n    emailData = email.payload;\n  }\n\n  const headers = emailData.headers || email.headers || email.payload?.headers;\n\n  return {\n    id: email.id || emailData.id || `email_${index}`,\n    sender: \n      email.From ||\n      email.from ||\n      getHeader(headers, 'From') ||\n      'sender inconnu',\n    to: \n      email.To ||\n      email.to ||\n      getHeader(headers, 'To') ||\n      'destinataire inconnu',\n    subject: \n      email.Subject ||\n      email.subject ||\n      getHeader(headers, 'Subject') ||\n      'No Subject',\n    date: \n      email.date ||\n      email.internalDate ||\n      getHeader(headers, 'Date') ||\n      new Date().toISOString(),\n    summary: \n      email.snippet ||\n      email.body ||\n      email.text ||\n      (emailData.body && emailData.body.data) ||\n      'No content available',\n    priority: 'medium',\n    read: email.read !== undefined ? email.read : true,\n    content: \n      email.body ||\n      email.snippet ||\n      email.text ||\n      (emailData.body && emailData.body.data) ||\n      'No content'\n  };\n});\n\nreturn [{\n  json: {\n    emails: transformedEmails,\n    metadata: {\n      totalCount: transformedEmails.length,\n      fetchedAt: new Date().toISOString(),\n      source: 'gmail-api'\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "5b82b87a-bb24-4c0f-82e6-46afbfd28808",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "b7966047-ba89-4210-bdc7-82db6d85945c",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "c0ecedc4-3538-4cd0-bef2-998bab44a0ce",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "./data/mails-today.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "f940dd5d-cc67-4f41-8011-3ee9386636f4",
+      "name": "Read/Write Files from Disk"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "b329d63a-ddc0-4d7b-88af-31ceab5ec399",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "37f6f08e19e96bc7da356535e80c3f48f1de3e26ac5e78ac79c2c95ec79bc00c"
+  },
+  "id": "365zmkJ1rZLxr9I9",
+  "tags": []
+}

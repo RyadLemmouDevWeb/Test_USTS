@@ -192,10 +192,9 @@ const EmailReplyForm = ({ selectedEmail, onClose, onReplySent }) => {
               </Button>
             </div>
           )}
-
           <Textarea
             placeholder={
-              replyMode === 'manual'
+              replyMode === 'manual' 
                 ? "Tapez votre réponse ici..."
                 : "Contexte optionnel pour l'IA (ex: 'Réponse polie de refus', 'Demander plus d'informations')..."
             }
@@ -204,9 +203,6 @@ const EmailReplyForm = ({ selectedEmail, onClose, onReplySent }) => {
             className="min-h-32 bg-white dark:bg-[#111827] border-gray-300 dark:border-gray-600 text-[#111827] dark:text-[#F9FAFB] focus:border-[#3B82F6] dark:focus:border-[#60A5FA]"
             disabled={loading || generatingAI}
           />
-        </div>
-
-        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mb-1">Email original :</p>
           <p className="text-sm text-[#111827] dark:text-[#F9FAFB]">
             {selectedEmail.summary || selectedEmail.content || 'Pas de contenu'}
