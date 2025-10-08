@@ -1,0 +1,201 @@
+{
+  "name": "AI-Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-summary",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e2eba6d3-c9b9-4c8b-984d-278889817473",
+      "name": "Webhook",
+      "webhookId": "930df23c-1702-4258-8e00-c76aecba5f0d"
+    },
+    {
+      "parameters": {
+        "fileSelector": "./data/mails-today.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "986e0e7d-b201-4626-9230-33913186686e",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "44707da3-bf8d-4c24-886a-7bbb00f4f4b1",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "let emails = [];\n\nif (Array.isArray(items[0].json.data)) {\n  const firstData = items[0].json.data[0];\n  if (Array.isArray(firstData.emails)) {\n    emails = firstData.emails;\n  }\n}\n\nconst prompt =\n  `Tu es un assistant qui résume des emails pour un manager.\\n` +\n  `Voici les emails reçus aujourd'hui :\\n\\n` +\n  emails\n    .map(\n      e =>\n        `De: ${e.sender}, Sujet: ${e.subject}, Extrait: ${e.summary}`\n    )\n    .join('\\n') +\n  `\\n\\nRédige un résumé clair, structuré, en français, en mettant en avant les points importants et les actions éventuelles à retenir.`;\n\nreturn [{ json: { prompt } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "9bb7e92b-207e-468a-b7d9-7ab677371b28",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Tu es un assistant qui résume des emails.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt.replace(/\\n/g,'\\\\n').replace(/\"/g,'\\\\\"') }}\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 512\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "34a6f5cf-b0a0-440f-b388-16c2c1964aea",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: {\n    summary: $json[\"choices\"][0][\"message\"][\"content\"]\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "bfcc0bc0-bc3f-40fa-8f44-e966e22dcdef",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "b8561616-3c34-4e8e-afad-1df9a35e2a3e",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "b9b9782f-4048-4d70-95ca-f2955ab3b3c0",
+  "meta": {
+    "instanceId": "37f6f08e19e96bc7da356535e80c3f48f1de3e26ac5e78ac79c2c95ec79bc00c"
+  },
+  "id": "Go2a44P5XnWZQV7o",
+  "tags": []
+}

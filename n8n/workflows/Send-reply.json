@@ -1,0 +1,94 @@
+{
+  "name": "Send-reply",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-reply",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b21d892d-a0ff-4a33-ba78-3edd63baec58",
+      "name": "Webhook",
+      "webhookId": "c2ba6481-7dd3-4cd4-9744-5b45d56a54ee"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json[\"body\"][\"to\"]}}",
+        "subject": "={{$json[\"body\"][\"subject\"]}}",
+        "message": "={{$json[\"body\"][\"body\"]}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "016de526-6376-43cf-9c6b-5a569c133509",
+      "name": "Send a message",
+      "webhookId": "1bb05742-a631-452e-ba0c-2d9be2257165",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "81cnOWzhifp5HqxH",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "88f5efec-24aa-4ed3-9ab2-32e3791ca1d2",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d01f6721-e7b3-4267-a02a-36084b755f17",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "37f6f08e19e96bc7da356535e80c3f48f1de3e26ac5e78ac79c2c95ec79bc00c"
+  },
+  "id": "4523cWqsKdKzAZvW",
+  "tags": []
+}

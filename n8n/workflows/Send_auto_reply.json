@@ -1,0 +1,282 @@
+{
+  "name": "Send_auto_reply",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-auto-reply",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -800,
+        -48
+      ],
+      "id": "eeec85dd-fa7a-43a2-a89f-b3beeb215034",
+      "name": "Webhook",
+      "webhookId": "1f664ee9-98e4-4fc6-88d2-9d8006250815"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{$json.body.messageId}}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -592,
+        -48
+      ],
+      "id": "7c430f07-7e92-4982-96d8-f912ef6e8a33",
+      "name": "Get a message",
+      "webhookId": "9fa696df-aea6-496c-81f2-356447582e39",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "81cnOWzhifp5HqxH",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const emailData = $json.payload || $json;\nconst snippet = $json.snippet || \"\";\nconst bodyData = emailData.body?.data || \"\";\n\n\nlet emailContent = snippet;\nif (bodyData) {\n  try {\n    emailContent = Buffer.from(bodyData, 'base64').toString('utf-8');\n  } catch (e) {\n    emailContent = snippet;\n  }\n}\n\nconst from = $json.from || \"\";\nconst subject = $json.subject || \"\";\n\nconst context = $json[\"context\"] || \"\";\nconst prompt = `Tu es un assistant qui répond aux emails pour un manager.\n\nEmail reçu de ${from}:\nSujet: ${subject}\nContenu: ${emailContent}\n\n${context ? \"Contexte : \" + context + \"\\n\\n\" : \"\"}Rédige une réponse professionnelle, claire et concise en français.`;\n\nreturn {\n  to: from,\n  subject: subject,\n  messageId: $json.id,\n  prompt: prompt\n};\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -48
+      ],
+      "id": "9bac91c2-730a-4a0a-bc9d-e1159880854f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Tu es un assistant qui répond aux emails pour un manager.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') }}\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 512\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        -48
+      ],
+      "id": "c77c2b8f-b3b0-42e2-9525-ed8f0e666cda",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3f84a2e6-27ff-43f3-ab4b-1e1389ae8b17",
+              "name": "body",
+              "value": "={{$json[\"choices\"][0][\"message\"][\"content\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "73003e14-8861-4af3-87b2-7202c26506e9",
+              "name": "messageId",
+              "value": "={{$node[\"Code in JavaScript\"].json[\"messageId\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "9217bc40-f5a4-441e-a61b-bb9fe0c88b22",
+              "name": "to",
+              "value": "={{$node[\"Code in JavaScript\"].json[\"to\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "f8802e1d-a568-409d-a4c9-bd9dfa8d7274",
+              "name": "subject",
+              "value": "={{$node[\"Code in JavaScript\"].json[\"subject\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "e3ee6ee0-f722-49ec-bd8f-e77ecad5d016",
+              "name": "generatedReply",
+              "value": "={{$json[\"choices\"][0][\"message\"][\"content\"]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -48
+      ],
+      "id": "ff116e90-0597-48f2-a8d7-df36fc6e901e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{$json[\"messageId\"]}}",
+        "message": "={{$json[\"body\"]}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        144
+      ],
+      "id": "fb05f3e1-4a9f-46a7-bfae-85c9b09143cf",
+      "name": "Reply to a message",
+      "webhookId": "8be6e8c5-5a6d-4a53-a1f2-e92975499b19",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "81cnOWzhifp5HqxH",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const setData = $input.all().find(item => item.json && item.json.generatedReply);\nconst gmailData = $input.all().find(item => item.json && item.json.labelIds);\n\nreturn [{\n  json: {\n    generatedReply: setData ? setData.json.generatedReply : \"Erreur de génération\",\n    success: true,\n    messageId: gmailData ? gmailData.json.id : \"unknown\",\n    emailSent: gmailData ? gmailData.json.labelIds.includes('SENT') : false\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -48
+      ],
+      "id": "f0821bab-9d0d-4444-8801-5cad762b8cf6",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        672,
+        -48
+      ],
+      "id": "8e36bf78-55a4-4fd2-a642-2dccf7d372e7",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to a message": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7cb1282b-939a-4891-aecb-6fa2b86aa315",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "37f6f08e19e96bc7da356535e80c3f48f1de3e26ac5e78ac79c2c95ec79bc00c"
+  },
+  "id": "JgKOsOrBGnSkaWmR",
+  "tags": []
+}

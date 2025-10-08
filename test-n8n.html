@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test N8N Connection</title>
+</head>
+<body>
+    <h1>Test de connexion N8N</h1>
+    <button onclick="testConnection()">Tester la connexion</button>
+    <div id="results"></div>
+
+    <script>
+        async function testConnection() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Test en cours...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:5678/webhook/get-mails');
+                const text = await response.text();
+                
+                resultsDiv.innerHTML = `
+                    <h3>Résultats du test:</h3>
+                    <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                    <p><strong>Content-Type:</strong> ${response.headers.get('content-type')}</p>
+                    <p><strong>Taille:</strong> ${text.length} caractères</p>
+                    <p><strong>Contenu:</strong></p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${text || '(vide)'}</pre>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <h3>Erreur:</h3>
+                    <p style="color: red;">${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
